@@ -241,6 +241,7 @@
         // Handle "Create Plot" button
         document.getElementById('plot-button').addEventListener('click', async () => {
             try {
+                // Generate the PNG plot in R
                 const plotRCode = `
                     data <- read.csv(${JSON.stringify(window.tempFilePath)})
                     
@@ -256,25 +257,37 @@
                         stop("The second column must be numeric.")
                     }
         
-                    # Plot the data
-                    svg(filename = "plot.svg")
+                    # Create the PNG plot
+                    png(filename = "plot.png", width = 800, height = 600)
                     plot(data[[1]], data[[2]], type = "o", main = "Data Plot",
                          xlab = "Date or Day", ylab = "Value", col = "blue", pch = 19)
                     dev.off()
                 `;
                 await webR.evalR(plotRCode);
         
-                // Fetch and display the SVG plot
-                const svgContent = await webR.FS.readFile("plot.svg", { encoding: "utf8" });
-                console.log(svgContent); // Log SVG content to ensure it’s valid
+                // Fetch the PNG binary data
+                const pngBinary = await webR.FS.readFile("plot.png");
+        
+                // Convert the binary data to a base64-encoded string
+                const blob = new Blob([pngBinary], { type: "image/png" });
+                const url = URL.createObjectURL(blob);
+        
+                // Display the PNG in the plot container
                 const plotContainer = document.getElementById('plot-container');
-                plotContainer.innerHTML = svgContent;
+                plotContainer.innerHTML = ""; // Clear previous content
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = "Generated Plot";
+                img.style.maxWidth = "100%"; // Ensure the image fits the container
+                plotContainer.appendChild(img);
         
                 output.textContent += `\nPlot created successfully!\n`;
             } catch (error) {
+                console.error("Error creating plot:", error.message);
                 output.textContent += `Error creating plot: ${error.message}\n`;
             }
         });
+
 
         // 6. Initialize WebR
         initializeWebR();
