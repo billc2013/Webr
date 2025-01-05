@@ -59,6 +59,10 @@
             <input type="text" id="r-input" placeholder="Enter R code (e.g., 1 + 1)">
             <button id="run-button">Run</button>
         </div>
+        <div id="file-container" style="margin-top: 20px;">
+            <label for="file-input">Upload a file (e.g., CSV): </label>
+            <input type="file" id="file-input">
+        </div>
         <pre id="output"></pre>
     </div>
 
@@ -165,6 +169,49 @@
         document.getElementById('run-button').addEventListener('click', runR);
         document.getElementById('r-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') runR();
+        });
+
+        // File Input Handling
+        document.getElementById('file-input').addEventListener('change', async (event) => {
+            const file = event.target.files[0]; // Get the uploaded file
+            if (!file) return;
+        
+            try {
+                // Step 1: Read the file content
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const fileContent = e.target.result; // File content as a string
+        
+                    // Step 2: Pass the content to WebR
+                    try {
+                        // Create a temporary file in R
+                        const rCode = `
+                            tempFile <- tempfile(fileext = ".csv")
+                            writeLines(${JSON.stringify(fileContent)}, tempFile)
+                            tempFile
+                        `;
+                        const result = await webR.evalR(rCode);
+                        const tempFilePath = await result.toJs();
+        
+                        // Step 3: Load the file into a data frame in R
+                        const loadCode = `
+                            data <- read.csv(${JSON.stringify(tempFilePath)})
+                            head(data) # Preview the data
+                        `;
+                        const loadResult = await webR.evalR(loadCode);
+        
+                        // Display the result in the REPL output
+                        const jsResult = await loadResult.toJs();
+                        output.textContent += `\n\nUploaded File Content:\n${formatROutput(jsResult)}`;
+                    } catch (error) {
+                        output.textContent += `Error loading file into R: ${error.message}\n`;
+                    }
+                };
+        
+                reader.readAsText(file); // Read the file as text
+            } catch (error) {
+                output.textContent += `Error reading file: ${error.message}\n`;
+            }
         });
 
         // 6. Initialize WebR
