@@ -233,7 +233,7 @@
         });
         
         // Handle "Create Plot" button
-       document.getElementById('plot-button').addEventListener('click', async () => {
+        document.getElementById('plot-button').addEventListener('click', async () => {
             try {
                 const plotRCode = `
                     data <- read.csv(${JSON.stringify(window.tempFilePath)})
@@ -260,20 +260,14 @@
         
                 // Fetch and display the SVG plot
                 const svgContent = await webR.FS.readFile("plot.svg", { encoding: "utf8" });
-                const plotContainer = document.createElement('div');
-                plot-container.innerHTML = svgContent;
-                document.body.appendChild(plotContainer);
+                const plotContainer = document.getElementById('plot-container');
+                plotContainer.innerHTML = svgContent;
         
                 output.textContent += `\nPlot created successfully!\n`;
             } catch (error) {
                 output.textContent += `Error creating plot: ${error.message}\n`;
             }
         });
-
-
-
-        
-
 
         // 6. Initialize WebR
         initializeWebR();
