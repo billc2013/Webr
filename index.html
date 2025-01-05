@@ -235,21 +235,39 @@
             try {
                 const plotRCode = `
                     data <- read.csv(${JSON.stringify(window.tempFilePath)})
-                    svg(filename = "plot.svg") # Save plot as SVG
-                    plot(data[,1], data[,2], main = "Basic Plot", xlab = "X-axis", ylab = "Y-axis", col = "blue", pch = 19)
-                    dev.off() # Finish writing the plot
+                    
+                    # Check if the first column is a date
+                    if (all(grepl("^\\d{4}-\\d{2}-\\d{2}$", data[[1]]))) {
+                        data[[1]] <- as.Date(data[[1]]) # Convert to Date format
+                    } else if (!is.numeric(data[[1]])) {
+                        stop("The first column must be numeric or a valid date string.")
+                    }
+        
+                    # Ensure the second column is numeric
+                    if (!is.numeric(data[[2]])) {
+                        stop("The second column must be numeric.")
+                    }
+        
+                    # Plot the data
+                    svg(filename = "plot.svg")
+                    plot(data[[1]], data[[2]], type = "o", main = "Data Plot",
+                         xlab = "Date or Day", ylab = "Value", col = "blue", pch = 19)
+                    dev.off()
                 `;
                 await webR.evalR(plotRCode);
-                
-                // Fetch the SVG plot
+        
+                // Fetch and display the SVG plot
                 const svgContent = await webR.FS.readFile("plot.svg", { encoding: "utf8" });
                 const plotContainer = document.createElement('div');
                 plotContainer.innerHTML = svgContent;
                 document.body.appendChild(plotContainer);
+        
+                output.textContent += `\nPlot created successfully!\n`;
             } catch (error) {
                 output.textContent += `Error creating plot: ${error.message}\n`;
             }
         });
+
 
         
 
