@@ -63,6 +63,11 @@
             <label for="file-input">Upload a file (e.g., CSV): </label>
             <input type="file" id="file-input">
         </div>
+        <div id="plot-options" style="display: none; margin-top: 20px;">
+            <button id="show-head-button">Display Head</button>
+            <button id="plot-button">Create Plot</button>
+        </div>
+
         <pre id="output"></pre>
     </div>
 
@@ -177,13 +182,12 @@
             if (!file) return;
         
             try {
-                // Step 1: Read the file content
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const fileContent = e.target.result; // File content as plain text
         
                     try {
-                        // Step 2: Create a temporary file in R
+                        // Create a temporary file in R
                         const tempFileRCode = `
                             tempFile <- tempfile(fileext = ".csv")
                             writeLines(c(${JSON.stringify(fileContent)}), tempFile)
@@ -192,16 +196,13 @@
                         const tempFileResult = await webR.evalR(tempFileRCode);
                         const tempFilePath = (await tempFileResult.toJs()).values[0]; // Get the R temp file path
         
-                        // Step 3: Load the file into a data frame in R
-                        const loadRCode = `
-                            data <- read.csv(${JSON.stringify(tempFilePath)})
-                            head(data) # Preview the data
-                        `;
-                        const loadResult = await webR.evalR(loadRCode);
+                        // Save the temp file path for future use
+                        window.tempFilePath = tempFilePath;
         
-                        // Display the result in the REPL output
-                        const jsResult = await loadResult.toJs();
-                        output.textContent += `\n\nUploaded File Content:\n${formatROutput(jsResult)}`;
+                        // Show the plot options to the user
+                        document.getElementById('plot-options').style.display = 'block';
+        
+                        output.textContent += `\nFile uploaded successfully! Choose an action below.\n`;
                     } catch (error) {
                         output.textContent += `Error loading file into R: ${error.message}\n`;
                     }
@@ -212,6 +213,45 @@
                 output.textContent += `Error reading file: ${error.message}\n`;
             }
         });
+        
+        // Handle "Display Head" button
+        document.getElementById('show-head-button').addEventListener('click', async () => {
+            try {
+                const headRCode = `
+                    data <- read.csv(${JSON.stringify(window.tempFilePath)})
+                    head(data)
+                `;
+                const headResult = await webR.evalR(headRCode);
+                const jsResult = await headResult.toJs();
+        
+                output.textContent += `\n\nFirst Few Rows of the Data:\n${formatROutput(jsResult)}`;
+            } catch (error) {
+                output.textContent += `Error displaying data: ${error.message}\n`;
+            }
+        });
+        
+        // Handle "Create Plot" button
+        document.getElementById('plot-button').addEventListener('click', async () => {
+            try {
+                const plotRCode = `
+                    data <- read.csv(${JSON.stringify(window.tempFilePath)})
+                    svg(filename = "plot.svg") # Save plot as SVG
+                    plot(data[,1], data[,2], main = "Basic Plot", xlab = "X-axis", ylab = "Y-axis", col = "blue", pch = 19)
+                    dev.off() # Finish writing the plot
+                `;
+                await webR.evalR(plotRCode);
+                
+                // Fetch the SVG plot
+                const svgContent = await webR.FS.readFile("plot.svg", { encoding: "utf8" });
+                const plotContainer = document.createElement('div');
+                plotContainer.innerHTML = svgContent;
+                document.body.appendChild(plotContainer);
+            } catch (error) {
+                output.textContent += `Error creating plot: ${error.message}\n`;
+            }
+        });
+
+        
 
 
         // 6. Initialize WebR
