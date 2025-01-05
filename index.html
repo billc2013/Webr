@@ -180,25 +180,24 @@
                 // Step 1: Read the file content
                 const reader = new FileReader();
                 reader.onload = async (e) => {
-                    const fileContent = e.target.result; // File content as a string
+                    const fileContent = e.target.result; // File content as plain text
         
-                    // Step 2: Pass the content to WebR
                     try {
-                        // Create a temporary file in R
-                        const rCode = `
+                        // Step 2: Create a temporary file in R
+                        const tempFileRCode = `
                             tempFile <- tempfile(fileext = ".csv")
-                            writeLines(${JSON.stringify(fileContent)}, tempFile)
+                            writeLines(c(${JSON.stringify(fileContent)}), tempFile)
                             tempFile
                         `;
-                        const result = await webR.evalR(rCode);
-                        const tempFilePath = await result.toJs();
+                        const tempFileResult = await webR.evalR(tempFileRCode);
+                        const tempFilePath = (await tempFileResult.toJs()).values[0]; // Get the R temp file path
         
                         // Step 3: Load the file into a data frame in R
-                        const loadCode = `
+                        const loadRCode = `
                             data <- read.csv(${JSON.stringify(tempFilePath)})
                             head(data) # Preview the data
                         `;
-                        const loadResult = await webR.evalR(loadCode);
+                        const loadResult = await webR.evalR(loadRCode);
         
                         // Display the result in the REPL output
                         const jsResult = await loadResult.toJs();
@@ -213,6 +212,7 @@
                 output.textContent += `Error reading file: ${error.message}\n`;
             }
         });
+
 
         // 6. Initialize WebR
         initializeWebR();
