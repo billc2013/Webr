@@ -3,6 +3,7 @@
 <head>
     <title>Local WebR REPL</title>
     <style>
+        /* CSS: Styles for the WebR REPL */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -48,7 +49,11 @@
 </head>
 <body>
     <h1>Local R REPL</h1>
+
+    <!-- Status Messages -->
     <div id="status-container"></div>
+
+    <!-- REPL Interface -->
     <div id="repl" style="display: none;">
         <div id="input-container">
             <input type="text" id="r-input" placeholder="Enter R code (e.g., 1 + 1)">
@@ -57,86 +62,113 @@
         <pre id="output"></pre>
     </div>
 
+    <!-- JavaScript -->
     <script type="module">
+        // 1. Import WebR
         import { WebR } from 'https://webr.r-wasm.org/v0.2.1/webr.mjs';
-        
-        const statusContainer = document.getElementById('status-container');
-        const output = document.getElementById('output');
-        
+
+        // 2. Utility Function Definitions
         function addStatus(message, type = 'info') {
             const status = document.createElement('div');
             status.className = `status ${type}`;
             status.textContent = message;
-            statusContainer.appendChild(status);
+            document.getElementById('status-container').appendChild(status);
             console.log(`${type}: ${message}`);
             return status;
         }
 
-        // Main initialization
-        try {
-            // Check cross-origin isolation status
-            if (crossOriginIsolated) {
-                addStatus('Cross-Origin Isolation active ✓', 'success');
-            } else {
-                addStatus('Cross-Origin Isolation not active ✗', 'error');
-                throw new Error('Cross-Origin Isolation required. Please use the provided Python server.');
+        function formatROutput(obj) {
+            if (!obj || !obj.type) return '';
+
+            let output = '';
+            switch (obj.type) {
+                case 'double':
+                case 'integer':
+                case 'logical':
+                case 'character':
+                    output += `[1] ${obj.values.join(' ')}\n`;
+                    break;
+                case 'list':
+                    output += 'List:\n';
+                    obj.values.forEach((val, index) => {
+                        output += `[[${index + 1}]]\n${formatROutput(val)}\n`;
+                    });
+                    break;
+                case 'data.frame':
+                    const colNames = obj.names || [];
+                    const rows = obj.values;
+                    output += colNames.join('\t') + '\n';
+                    rows.forEach(row => {
+                        output += row.values.join('\t') + '\n';
+                    });
+                    break;
+                default:
+                    output += `Unsupported type: ${obj.type}\n`;
             }
-            
-            addStatus('Starting WebR initialization...');
-            
-            const webR = new WebR({
-                baseURL: 'https://webr.r-wasm.org/v0.2.1/'
-            });
-            
-            addStatus('WebR instance created. Loading R...');
-            
-            await webR.init();
-            addStatus('R initialized successfully!', 'success');
-            
-            // Show the REPL interface
-            document.getElementById('repl').style.display = 'block';
-            output.textContent = 'R is ready! Try these examples:\n\n> 1 + 1\n> rnorm(10)\n> summary(cars)';
-            
-            // Handle running R code
-            async function runR() {
-                const input = document.getElementById('r-input');
-                const code = input.value.trim();
-            
-                if (!code) return;
-            
-                try {
-                    output.textContent += `\n\n> ${code}\n`;
-            
-                    const result = await webR.evalR(code);
-            
-                    // Attempt to convert the result to a JavaScript object
-                    try {
-                        const jsResult = await result.toJs();
-                        output.textContent += JSON.stringify(jsResult, null, 2);
-                    } catch (conversionError) {
-                        // Fallback: Use toString() if toJs() fails
-                        const text = await result.toString();
-                        output.textContent += text;
-                    }
-                } catch (error) {
-                    output.textContent += `Error: ${error.message}\n`;
+            return output;
+        }
+
+        // 3. Main Initialization Logic
+        const webR = new WebR({
+            baseURL: 'https://webr.r-wasm.org/v0.2.1/'
+        });
+
+        async function initializeWebR() {
+            try {
+                if (crossOriginIsolated) {
+                    addStatus('Cross-Origin Isolation active ✓', 'success');
+                } else {
+                    throw new Error('Cross-Origin Isolation required. Please use a proper server.');
                 }
-            
-                input.value = '';
-                output.scrollTop = output.scrollHeight;
+
+                addStatus('Starting WebR initialization...');
+                await webR.init();
+                addStatus('R initialized successfully!', 'success');
+
+                document.getElementById('repl').style.display = 'block';
+                document.getElementById('output').textContent = 'R is ready! Try these examples:\n\n> 1 + 1\n> rnorm(10)\n> summary(cars)';
+            } catch (error) {
+                addStatus(`Error: ${error.message}`, 'error');
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // 4. Run R Code
+        async function runR() {
+            const input = document.getElementById('r-input');
+            const code = input.value.trim();
+
+            if (!code) return;
+
+            try {
+                const output = document.getElementById('output');
+                output.textContent += `\n\n> ${code}\n`;
+
+                const result = await webR.evalR(code);
+
+                try {
+                    const jsResult = await result.toJs();
+                    output.textContent += formatROutput(jsResult);
+                } catch (conversionError) {
+                    const text = await result.toString();
+                    output.textContent += text;
+                }
+            } catch (error) {
+                document.getElementById('output').textContent += `Error: ${error.message}\n`;
             }
 
-            
-            // Add event listeners
-            document.getElementById('run-button').addEventListener('click', runR);
-            document.getElementById('r-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') runR();
-            });
-            
-        } catch (error) {
-            addStatus(`Error: ${error.message}`, 'error');
-            console.error('Detailed error:', error);
+            input.value = '';
+            output.scrollTop = output.scrollHeight;
         }
+
+        // 5. Event Listeners
+        document.getElementById('run-button').addEventListener('click', runR);
+        document.getElementById('r-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') runR();
+        });
+
+        // 6. Initialize WebR
+        initializeWebR();
     </script>
 </body>
 </html>
