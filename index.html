@@ -231,13 +231,13 @@
         });
         
         // Handle "Create Plot" button
-        document.getElementById('plot-button').addEventListener('click', async () => {
+       document.getElementById('plot-button').addEventListener('click', async () => {
             try {
                 const plotRCode = `
                     data <- read.csv(${JSON.stringify(window.tempFilePath)})
                     
                     # Check if the first column is a date
-                    if (all(grepl("^\\d{4}-\\d{2}-\\d{2}$", data[[1]]))) {
+                    if (all(grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", data[[1]]))) {
                         data[[1]] <- as.Date(data[[1]]) # Convert to Date format
                     } else if (!is.numeric(data[[1]])) {
                         stop("The first column must be numeric or a valid date string.")
@@ -267,6 +267,7 @@
                 output.textContent += `Error creating plot: ${error.message}\n`;
             }
         });
+
 
 
         
