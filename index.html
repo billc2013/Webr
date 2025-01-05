@@ -185,7 +185,7 @@
         });
 
         // File Input Handling
-        document.getElementById('file-input').addEventListener('change', async (event) => {
+       document.getElementById('file-input').addEventListener('change', async (event) => {
             const file = event.target.files[0]; // Get the uploaded file
             if (!file) return;
         
@@ -195,24 +195,21 @@
                     const fileContent = e.target.result; // File content as plain text
         
                     try {
-                        // Create a temporary file in R
+                        // Save the file to /home/web_user
                         const tempFileRCode = `
-                            tempFile <- tempfile(fileext = ".csv")
+                            tempFile <- "/home/web_user/${file.name}"
                             writeLines(c(${JSON.stringify(fileContent)}), tempFile)
                             tempFile
                         `;
                         const tempFileResult = await webR.evalR(tempFileRCode);
-                        const tempFilePath = (await tempFileResult.toJs()).values[0]; // Get the R temp file path
+                        const tempFilePath = (await tempFileResult.toJs()).values[0]; // Get the file path
         
-                        // Save the temp file path for future use
+                        // Save the path for future use
                         window.tempFilePath = tempFilePath;
         
-                        // Show the plot options to the user
-                        document.getElementById('plot-options').style.display = 'block';
-        
-                        output.textContent += `\nFile uploaded successfully! Choose an action below.\n`;
+                        output.textContent += `\nFile saved to: ${tempFilePath}\n`;
                     } catch (error) {
-                        output.textContent += `Error loading file into R: ${error.message}\n`;
+                        output.textContent += `Error saving file to /home/web_user: ${error.message}\n`;
                     }
                 };
         
@@ -221,6 +218,7 @@
                 output.textContent += `Error reading file: ${error.message}\n`;
             }
         });
+
         
         // Handle "Display Head" button
         document.getElementById('show-head-button').addEventListener('click', async () => {
