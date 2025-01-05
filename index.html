@@ -45,6 +45,12 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        #plot-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 300px;
+            min-width: 300px;
+        }
     </style>
 </head>
 <body>
@@ -260,6 +266,7 @@
         
                 // Fetch and display the SVG plot
                 const svgContent = await webR.FS.readFile("plot.svg", { encoding: "utf8" });
+                console.log(svgContent); // Log SVG content to ensure it’s valid
                 const plotContainer = document.getElementById('plot-container');
                 plotContainer.innerHTML = svgContent;
         
