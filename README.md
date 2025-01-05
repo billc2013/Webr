@@ -1,4 +1,3 @@
-```markdown
 # Local WebR REPL
 
 This project is a web-based R REPL (Read-Eval-Print Loop) built using [WebR](https://webr.r-wasm.org/). It allows users to execute R code directly in the browser, upload CSV files for analysis, and generate plots dynamically.
@@ -129,4 +128,3 @@ Provides the interface for:
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
