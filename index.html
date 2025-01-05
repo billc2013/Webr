@@ -101,21 +101,31 @@
             async function runR() {
                 const input = document.getElementById('r-input');
                 const code = input.value.trim();
-                
+            
                 if (!code) return;
-                
+            
                 try {
                     output.textContent += `\n\n> ${code}\n`;
+            
                     const result = await webR.evalR(code);
-                    const text = await result.toString();
-                    output.textContent += text;
+            
+                    // Attempt to convert the result to a JavaScript object
+                    try {
+                        const jsResult = await result.toJs();
+                        output.textContent += JSON.stringify(jsResult, null, 2);
+                    } catch (conversionError) {
+                        // Fallback: Use toString() if toJs() fails
+                        const text = await result.toString();
+                        output.textContent += text;
+                    }
                 } catch (error) {
                     output.textContent += `Error: ${error.message}\n`;
                 }
-                
+            
                 input.value = '';
                 output.scrollTop = output.scrollHeight;
             }
+
             
             // Add event listeners
             document.getElementById('run-button').addEventListener('click', runR);
