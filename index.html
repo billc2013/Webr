@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Local WebR REPL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 3px;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #e2e3e5; color: #383d41; }
+        #output {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        #input-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        #r-input {
+            flex-grow: 1;
+            padding: 8px;
+        }
+        #run-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Local R REPL</h1>
+    <div id="status-container"></div>
+    <div id="repl" style="display: none;">
+        <div id="input-container">
+            <input type="text" id="r-input" placeholder="Enter R code (e.g., 1 + 1)">
+            <button id="run-button">Run</button>
+        </div>
+        <pre id="output"></pre>
+    </div>
+
+    <script type="module">
+        import { WebR } from 'https://webr.r-wasm.org/v0.2.1/webr.mjs';
+        
+        const statusContainer = document.getElementById('status-container');
+        const output = document.getElementById('output');
+        
+        function addStatus(message, type = 'info') {
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            statusContainer.appendChild(status);
+            console.log(`${type}: ${message}`);
+            return status;
+        }
+
+        // Main initialization
+        try {
+            // Check cross-origin isolation status
+            if (crossOriginIsolated) {
+                addStatus('Cross-Origin Isolation active ✓', 'success');
+            } else {
+                addStatus('Cross-Origin Isolation not active ✗', 'error');
+                throw new Error('Cross-Origin Isolation required. Please use the provided Python server.');
+            }
+            
+            addStatus('Starting WebR initialization...');
+            
+            const webR = new WebR({
+                baseURL: 'https://webr.r-wasm.org/v0.2.1/'
+            });
+            
+            addStatus('WebR instance created. Loading R...');
+            
+            await webR.init();
+            addStatus('R initialized successfully!', 'success');
+            
+            // Show the REPL interface
+            document.getElementById('repl').style.display = 'block';
+            output.textContent = 'R is ready! Try these examples:\n\n> 1 + 1\n> rnorm(10)\n> summary(cars)';
+            
+            // Handle running R code
+            async function runR() {
+                const input = document.getElementById('r-input');
+                const code = input.value.trim();
+                
+                if (!code) return;
+                
+                try {
+                    output.textContent += `\n\n> ${code}\n`;
+                    const result = await webR.evalR(code);
+                    const text = await result.toString();
+                    output.textContent += text;
+                } catch (error) {
+                    output.textContent += `Error: ${error.message}\n`;
+                }
+                
+                input.value = '';
+                output.scrollTop = output.scrollHeight;
+            }
+            
+            // Add event listeners
+            document.getElementById('run-button').addEventListener('click', runR);
+            document.getElementById('r-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') runR();
+            });
+            
+        } catch (error) {
+            addStatus(`Error: ${error.message}`, 'error');
+            console.error('Detailed error:', error);
+        }
+    </script>
+</body>
+</html>
