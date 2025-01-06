@@ -2,6 +2,8 @@
 
 This project is a web-based R REPL (Read-Eval-Print Loop) built using [WebR](https://webr.r-wasm.org/). It allows users to execute R code directly in the browser, upload CSV files for analysis, and generate plots dynamically.
 
+Current version is hosted at: https://webr-test2.netlify.app
+
 ## Features
 
 1. **Run R Code Directly in Browser**:
