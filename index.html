@@ -185,35 +185,39 @@
         });
 
         // File Input Handling
-       document.getElementById('file-input').addEventListener('change', async (event) => {
-            const file = event.target.files[0]; // Get the uploaded file
+        document.getElementById('file-input').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
             if (!file) return;
         
             try {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
-                    const fileContent = e.target.result; // File content as plain text
+                    const fileContent = e.target.result;
         
                     try {
-                        // Save the file to /home/web_user
                         const tempFileRCode = `
                             tempFile <- "/home/web_user/${file.name}"
                             writeLines(c(${JSON.stringify(fileContent)}), tempFile)
                             tempFile
                         `;
                         const tempFileResult = await webR.evalR(tempFileRCode);
-                        const tempFilePath = (await tempFileResult.toJs()).values[0]; // Get the file path
+                        const tempFilePath = (await tempFileResult.toJs()).values[0];
         
-                        // Save the path for future use
                         window.tempFilePath = tempFilePath;
         
                         output.textContent += `\nFile saved to: ${tempFilePath}\n`;
+                        
+                        // Show the plot options after successful file upload
+                        document.getElementById('plot-options').style.display = 'block';
+                        
+                        // Optional: Add a status message
+                        addStatus('File uploaded successfully. You can now view data or create plots.', 'success');
                     } catch (error) {
                         output.textContent += `Error saving file to /home/web_user: ${error.message}\n`;
                     }
                 };
         
-                reader.readAsText(file); // Read the file as text
+                reader.readAsText(file);
             } catch (error) {
                 output.textContent += `Error reading file: ${error.message}\n`;
             }
